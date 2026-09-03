@@ -1,12 +1,12 @@
-import { Button } from "@/components/Button/Button";
-import { Logo } from "@/components/Logo/Logo";
-import { Colors, Spacing, Typography } from "@/constants/theme";
-import { useCheckIn } from "@/hooks/useCheckIn";
-import React from "react";
-import { StyleSheet, Text, View } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { Card } from "../components/Card/Card";
-import { UrduDateFormatter } from "../utils/formatters/UrduDateFormatter";
+import React from 'react';
+import { View, Text, StyleSheet } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Logo } from '@/components/Logo/Logo';
+import { DateTimeBox } from '@/components/DateTimeBox/DateTimeBox';
+import { Button } from '@/components/Button/Button';
+import { useCheckIn } from '@/hooks/useCheckIn';
+import { UrduDateFormatter } from '@/utils/formatters/UrduDateFormatter';
+import { Colors, Spacing, LoginLayout, CheckInLayout, Typography } from '@/constants/theme';
 
 export default function CheckInScreen() {
   const { isLoading, errorMessage, handleCheckIn } = useCheckIn();
@@ -15,26 +15,22 @@ export default function CheckInScreen() {
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.content}>
-        <Logo />
+        <View style={{ marginTop: LoginLayout.logoTop }}>
+          <Logo />
+        </View>
 
-        <Text style={styles.heading}>آج کی حاضری درج کریں</Text>
+        <View style={styles.card}>
+          <Text style={styles.heading}>آج کی حاضری درج کریں</Text>
 
-        <Card style={styles.dateCard}>
-          <Text style={styles.dateText}>
-            {UrduDateFormatter.formatDate(now)}
-          </Text>
-          <Text style={styles.timeText}>
-            {UrduDateFormatter.formatTime(now)}
-          </Text>
-        </Card>
+          <DateTimeBox
+            dateLabel={UrduDateFormatter.formatDate(now)}
+            timeLabel={UrduDateFormatter.formatTime(now)}
+          />
 
-        {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
+          {errorMessage && <Text style={styles.errorText}>{errorMessage}</Text>}
 
-        <Button
-          title="حاضر ہوں"
-          onPress={handleCheckIn}
-          isLoading={isLoading}
-        />
+          <Button title="حاضر ہوں" onPress={handleCheckIn} isLoading={isLoading} />
+        </View>
       </View>
     </SafeAreaView>
   );
@@ -47,33 +43,31 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: "center",
-    paddingHorizontal: Spacing.lg,
+    alignItems: 'center',
+  },
+  card: {
+    width: CheckInLayout.cardWidth,
+    marginTop: Spacing.xl,
+    backgroundColor: Colors.surface,
+    borderRadius: CheckInLayout.cardRadius,
+    borderWidth: CheckInLayout.cardBorderWidth,
+    borderColor: Colors.border,
+    padding: CheckInLayout.cardPadding,
+    gap: CheckInLayout.cardGap,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    elevation: 3,
   },
   heading: {
-    ...Typography.title,
-    color: Colors.textPrimary,
-    textAlign: "center",
-    marginBottom: Spacing.lg,
-  },
-  dateCard: {
-    alignItems: "center",
-    paddingVertical: Spacing.lg,
-    marginBottom: Spacing.xl,
-  },
-  dateText: {
-    ...Typography.label,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
-  },
-  timeText: {
-    ...Typography.subtitle,
-    color: Colors.textSecondary,
+    ...Typography.checkInHeading,
+    color: '#000000',
+    textAlign: 'center',
   },
   errorText: {
-    ...Typography.hint,
+    ...Typography.loginHint,
     color: Colors.error,
-    textAlign: "center",
-    marginBottom: Spacing.md,
+    textAlign: 'center',
   },
 });

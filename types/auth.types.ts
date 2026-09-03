@@ -7,7 +7,7 @@ export interface AuthUser {
   id: string;
   name: string;
   mobileNumber: string;
-  role: 'qari' | 'admin';
+  role: 'qari' | 'admin' | 'parent';
   assignedClass?: string;
 }
 

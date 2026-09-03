@@ -1,6 +1,6 @@
-import { IAuthStrategy } from './IAuthStrategy';
-import { MockAuthStrategy } from './MockAuthStrategy';
-import { LoginCredentials, LoginResult } from '@/types/auth.types';
+import { LoginCredentials, LoginResult } from "@/types/auth.types";
+import { IAuthStrategy } from "./IAuthStrategy";
+import { MockAuthStrategy } from "./MockAuthStrategy";
 
 // Singleton — poori app mein ek hi AuthService instance
 class AuthService {
@@ -13,7 +13,6 @@ class AuthService {
 
   static getInstance(): AuthService {
     if (!AuthService.instance) {
-      // Real API taiyar hone par sirf yahan RealAuthStrategy() daal dein
       AuthService.instance = new AuthService(new MockAuthStrategy());
     }
     return AuthService.instance;

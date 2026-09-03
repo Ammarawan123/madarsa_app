@@ -1,6 +1,5 @@
 export const Strings = {
-  appName: 'مدرسہ فاروق أعظم',
-  appCity: 'کراچی',
+
   usernameLabel: 'صارف نام',
   usernamePlaceholder: 'عبداللہ احمد',
   passwordLabel: 'پاسورڈ',

@@ -1,18 +1,20 @@
-import { Button } from "@/components/Button/Button";
-import { Input } from "@/components/Input/Input";
-import { Logo } from "@/components/Logo/Logo";
-import { Strings } from "@/constants/strings";
-import { Colors, Spacing, Typography } from "@/constants/theme";
-import { useLogin } from "@/hooks/useLogin";
-import React from "react";
+import React from 'react';
 import {
-    KeyboardAvoidingView,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-} from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+  View,
+  StyleSheet,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Logo } from '@/components/Logo/Logo';
+import { Input } from '@/components/Input/Input';
+import { PasswordInput } from '@/components/PasswordInput/PasswordInput';
+import { Button } from '@/components/Button/Button';
+import { HintBox } from '@/components/HintBox/HintBox';
+import { useLogin } from '@/hooks/useLogin';
+import { Colors, Spacing, LoginLayout } from '@/constants/theme';
+import { Strings } from '@/constants/strings';
 
 export default function LoginScreen() {
   const {
@@ -20,7 +22,6 @@ export default function LoginScreen() {
     password,
     mobileError,
     passwordError,
-    generalError,
     isLoading,
     setMobileNumber,
     setPassword,
@@ -31,45 +32,46 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           keyboardShouldPersistTaps="handled"
         >
-          <Logo />
+          <View style={{ marginTop: LoginLayout.logoTop }}>
+            <Logo />
+          </View>
 
-          <Input
-            label={Strings.usernameLabel}
-            placeholder={Strings.usernamePlaceholder}
-            value={mobileNumber}
-            onChangeText={setMobileNumber}
-            errorMessage={mobileError}
-            keyboardType="phone-pad"
-            autoCapitalize="none"
-          />
+          <View style={styles.card}>
+            <Input
+              label={Strings.usernameLabel}
+              placeholder={Strings.usernamePlaceholder}
+              value={mobileNumber}
+              onChangeText={setMobileNumber}
+              errorMessage={mobileError}
+              keyboardType="phone-pad"
+              autoCapitalize="none"
+            />
 
-          <Input
-            label={Strings.passwordLabel}
-            placeholder={Strings.passwordPlaceholder}
-            value={password}
-            onChangeText={setPassword}
-            errorMessage={passwordError}
-            secureTextEntry
-            autoCapitalize="none"
-          />
+            <PasswordInput
+              label={Strings.passwordLabel}
+              placeholder={Strings.passwordPlaceholder}
+              value={password}
+              onChangeText={setPassword}
+              errorMessage={passwordError}
+            />
 
-          {generalError && (
-            <Text style={styles.generalError}>{generalError}</Text>
-          )}
+            <Button
+              title={Strings.loginButton}
+              onPress={handleLogin}
+              isLoading={isLoading}
+            />
 
-          <Button
-            title={isLoading ? Strings.loggingIn : Strings.loginButton}
-            onPress={handleLogin}
-            isLoading={isLoading}
-          />
-
-          <Text style={styles.hint}>{Strings.forgotPasswordHint}</Text>
+            <HintBox
+              text="پاس ورڈ بھول گئے؟ برائے کرم مدرسہ انتظامیہ سے رابطہ کریں۔"
+              boldPart="مدرسہ انتظامیہ"
+            />
+          </View>
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -86,20 +88,23 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
-    justifyContent: "center",
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.xxl,
+    alignItems: 'center',
+    paddingBottom: Spacing.xxl,
   },
-  generalError: {
-    ...Typography.hint,
-    color: Colors.error,
-    textAlign: "center",
-    marginBottom: Spacing.md,
-  },
-  hint: {
-    ...Typography.hint,
-    color: Colors.textSecondary,
-    textAlign: "center",
-    marginTop: Spacing.lg,
+  card: {
+    width: LoginLayout.cardWidth,
+    marginTop: Spacing.xl, // logo aur card ke beech ka gap (Figma: 32px)
+    backgroundColor: Colors.surface,
+    borderRadius: LoginLayout.cardRadius,
+    borderWidth: LoginLayout.cardBorderWidth,
+    borderColor: Colors.border,
+    padding: LoginLayout.cardPadding,
+    gap: LoginLayout.cardGap,
+    // Figma: X0 Y2 Blur8 Spread0
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3, // Android shadow
   },
 });

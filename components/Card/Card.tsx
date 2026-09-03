@@ -1,10 +1,10 @@
-import { PropsWithChildren } from "react";
-import { StyleProp, StyleSheet, View, ViewStyle } from "react-native";
+import React from 'react';
+import { View, StyleSheet, ViewStyle } from 'react-native';
+import { Colors, Spacing, Radius } from '@/constants/theme';
 
-import { Colors, Radius, Spacing } from "@/constants/theme";
-
-interface CardProps extends PropsWithChildren {
-  style?: StyleProp<ViewStyle>;
+interface CardProps {
+  children: React.ReactNode;
+  style?: ViewStyle;
 }
 
 export function Card({ children, style }: CardProps) {
@@ -14,9 +14,10 @@ export function Card({ children, style }: CardProps) {
 const styles = StyleSheet.create({
   card: {
     backgroundColor: Colors.surface,
-    borderColor: Colors.border,
     borderRadius: Radius.md,
-    borderWidth: 1,
     padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    borderWidth: 0.5,
+    borderColor: Colors.primary,
   },
 });

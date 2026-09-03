@@ -29,7 +29,7 @@ export function useCheckIn(qariId: string = "qari-001") {
         return;
       }
 
-      router.replace("/(tabs)");
+          router.replace('/(tabs)/home');
     } catch {
       setState({
         isLoading: false,

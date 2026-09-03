@@ -1,28 +1,28 @@
 import React from 'react';
 import { View, Text, TextInput, StyleSheet, TextInputProps } from 'react-native';
-import { Colors, Spacing, Typography, Radius } from '@/constants/theme';
+import { Colors, LoginLayout, Typography } from '@/constants/theme';
 
 interface InputProps extends TextInputProps {
   label: string;
   errorMessage?: string | null;
+  rightElement?: React.ReactNode;
 }
 
-export function Input({ label, errorMessage, style, ...rest }: InputProps) {
+export function Input({ label, errorMessage, rightElement, style, ...rest }: InputProps) {
   const hasError = Boolean(errorMessage);
 
   return (
     <View style={styles.container}>
       <Text style={styles.label}>{label}</Text>
-      <TextInput
-        style={[
-          styles.input,
-          hasError && styles.inputError,
-          style,
-        ]}
-        placeholderTextColor={Colors.placeholder}
-        textAlign="right"
-        {...rest}
-      />
+      <View style={[styles.inputRow, hasError && styles.inputError]}>
+        <TextInput
+          style={[styles.input, style]}
+          placeholderTextColor={Colors.placeholder}
+          textAlign="right"
+          {...rest}
+        />
+        {rightElement}
+      </View>
       {hasError && <Text style={styles.errorText}>{errorMessage}</Text>}
     </View>
   );
@@ -30,22 +30,27 @@ export function Input({ label, errorMessage, style, ...rest }: InputProps) {
 
 const styles = StyleSheet.create({
   container: {
-    marginBottom: Spacing.md,
+    width: '100%',
   },
   label: {
-    ...Typography.label,
-    color: Colors.textPrimary,
-    marginBottom: Spacing.xs,
+    ...Typography.fieldLabel,
+    color: Colors.primary,
+    marginBottom: 8,
     textAlign: 'right',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.background,
+    borderWidth: LoginLayout.cardBorderWidth,
+    borderColor: Colors.border,
+    borderRadius: LoginLayout.inputRadius,
+    paddingHorizontal: LoginLayout.inputPaddingH,
+    height: LoginLayout.inputHeight,
   },
   input: {
     ...Typography.input,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md,
-    paddingVertical: Spacing.sm + 4,
+    flex: 1,
     color: Colors.textPrimary,
   },
   inputError: {
@@ -53,8 +58,9 @@ const styles = StyleSheet.create({
   },
   errorText: {
     ...Typography.hint,
+    fontSize: 12,
     color: Colors.error,
-    marginTop: Spacing.xs,
+    marginTop: 4,
     textAlign: 'right',
   },
 });

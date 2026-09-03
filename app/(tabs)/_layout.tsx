@@ -1,31 +1,39 @@
-import { Ionicons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import React from "react";
+import { Tabs } from 'expo-router';
+import React from 'react';
 
-import { Colors } from "@/constants/theme";
+import { TabIcon } from '@/components/TabIcon/TabIcon';
+import { TabLabel } from '@/components/TabLabel/TabLabel';
+import { TAB_CONFIG } from '@/constants/tabs.config';
+import { Colors } from '@/constants/theme';
 
 export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.primary,
-        tabBarInactiveTintColor: Colors.textSecondary,
         headerShown: false,
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
+          paddingTop: 8,
         },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "ڈیش بورڈ",
-          tabBarIcon: ({ color, size }) => (
-            <Ionicons name="grid-outline" size={size} color={color} />
-          ),
-        }}
-      />
+      {TAB_CONFIG.map((tab) => (
+        <Tabs.Screen
+          key={tab.name}
+          name={tab.name}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <TabIcon
+                activeSource={tab.activeIcon}
+                inactiveSource={tab.inactiveIcon}
+                focused={focused}
+              />
+            ),
+            tabBarLabel: ({ focused }) => <TabLabel label={tab.label} focused={focused} />,
+          }}
+        />
+      ))}
     </Tabs>
   );
 }

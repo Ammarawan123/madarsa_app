@@ -74,8 +74,12 @@ export function useLogin() {
         return;
       }
 
-      // Success — dashboard par navigate
-      router.replace("/check-in" as never);
+      // Success — role-based navigation
+      if (result.user?.role === 'parent') {
+        router.replace('/(parent-tabs)/home' as never);
+      } else {
+        router.replace('/check-in' as never);
+      }
     } catch {
       setState((prev) => ({
         ...prev,
