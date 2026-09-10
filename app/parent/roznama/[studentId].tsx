@@ -61,7 +61,10 @@ export default function ParentRoznamaEntryScreen() {
 
   return (
     <SafeAreaView style={styles.safeArea}>
-      <ActionHeader title="روزنامہ" />
+      <ActionHeader
+        title="روزنامہ"
+        onBackPress={() => router.push('/(parent-tabs)/home')}
+      />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
