@@ -1,0 +1,251 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model chat_messages {
+  id           Int           @id @default(autoincrement())
+  threadId     Int           @map("thread_id")
+  senderId     Int           @map("sender_id")
+  messageText  String        @map("message_text")
+  isRead       Boolean?      @default(false) @map("is_read")
+  createdAt    DateTime?     @default(now()) @map("created_at") @db.Timestamp(6)
+  
+  sender       users         @relation(fields: [senderId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  thread       chat_threads  @relation(fields: [threadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@map("chat_messages")
+}
+
+model chat_threads {
+  id            Int             @id @default(autoincrement())
+  studentId     Int             @map("student_id")
+  qariId        Int             @map("qari_id")
+  parentId      Int             @map("parent_id")
+  createdAt     DateTime?       @default(now()) @map("created_at") @db.Timestamp(6)
+
+  messages      chat_messages[]
+  parent        parents         @relation(fields: [parentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  qari          qaris           @relation(fields: [qariId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student       students        @relation(fields: [studentId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([studentId, qariId, parentId], map: "chat_threads_student_id_qari_id_parent_id_idx")
+  @@map("chat_threads")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model classes {
+  id         Int        @id @default(autoincrement())
+  class_name String     @db.VarChar(50)
+  qari_id    Int        @unique
+  created_at DateTime?  @default(now()) @db.Timestamp(6)
+  qaris      qaris      @relation(fields: [qari_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students   students[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model daily_hifz_reports {
+  id                   Int       @id @default(autoincrement())
+  student_id           Int
+  qari_id              Int
+  report_date          DateTime  @db.Date
+  status               String    @default("pending") @db.VarChar(20)
+  reciter_type         String    @default("qari") @db.VarChar(10)
+  reciter_student_name String?   @db.VarChar(100)
+  completed_para       String?   @db.VarChar(50)
+  sabaq_surah_from     String?   @db.VarChar(100)
+  sabaq_surah_to       String?   @db.VarChar(100)
+  sabqi_mistakes       Int?      @default(0)
+  manzil_details       String?   @db.VarChar(100)
+  manzil_recited       String?   @db.VarChar(50)
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  qaris                qaris     @relation(fields: [qari_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students             students  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, report_date], map: "daily_hifz_reports_student_id_report_date_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model daily_nazra_reports {
+  id                   Int       @id @default(autoincrement())
+  student_id           Int
+  qari_id              Int
+  report_date          DateTime  @db.Date
+  status               String    @default("pending") @db.VarChar(20)
+  reciter_type         String    @default("qari") @db.VarChar(10)
+  reciter_student_name String?   @db.VarChar(100)
+  qaida_name           String?   @db.VarChar(100)
+  takhti_number        String?   @db.VarChar(50)
+  mistakes             Int?      @default(0)
+  teacher_remarks      String?
+  created_at           DateTime? @default(now()) @db.Timestamp(6)
+  qaris                qaris     @relation(fields: [qari_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students             students  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, report_date], map: "daily_nazra_reports_student_id_report_date_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model daily_parent_reports {
+  id                  Int       @id @default(autoincrement())
+  student_id          Int
+  parent_id           Int
+  report_date         DateTime  @db.Date
+  status              String    @default("pending") @db.VarChar(20)
+  home_arrival_time   DateTime? @db.Time(6)
+  fajr_offered        Boolean?  @default(false)
+  zuhr_offered        Boolean?  @default(false)
+  asr_offered         Boolean?  @default(false)
+  maghrib_offered     Boolean?  @default(false)
+  isha_offered        Boolean?  @default(false)
+  screen_time_hours   Int?      @default(0)
+  screen_time_minutes Int?      @default(0)
+  parent_remarks      String?
+  created_at          DateTime? @default(now()) @db.Timestamp(6)
+  parents             parents   @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students            students  @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, report_date], map: "daily_parent_reports_student_id_report_date_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model leave_requests {
+  id         Int           @id @default(autoincrement())
+  student_id Int
+  parent_id  Int
+  start_date DateTime      @db.Date
+  end_date   DateTime      @db.Date
+  reason     String
+  status     leave_status? @default(PENDING)
+  created_at DateTime?     @default(now()) @db.Timestamp(6)
+  parents    parents       @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students   students      @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model parents {
+  id                   Int                    @id @default(autoincrement())
+  user_id              Int                    @unique
+  chat_threads         chat_threads[]
+  daily_parent_reports daily_parent_reports[]
+  leave_requests       leave_requests[]
+  users                users                  @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students             students[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model qari_attendance {
+  id             Int       @id @default(autoincrement())
+  qari_id        Int
+  check_in_time  DateTime  @db.Timestamp(6)
+  check_out_time DateTime? @db.Timestamp(6)
+  date           DateTime  @db.Date
+  qaris          qaris     @relation(fields: [qari_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([qari_id, date], map: "qari_attendance_qari_id_date_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model qaris {
+  id                  Int                   @id @default(autoincrement())
+  user_id             Int                   @unique
+  qualification       String?               @db.VarChar(100)
+  chat_threads        chat_threads[]
+  classes             classes?
+  daily_hifz_reports  daily_hifz_reports[]
+  daily_nazra_reports daily_nazra_reports[]
+  qari_attendance     qari_attendance[]
+  users               users                 @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  student_attendance  student_attendance[]
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model student_attendance {
+  id         Int               @id @default(autoincrement())
+  student_id Int
+  qari_id    Int
+  date       DateTime          @db.Date
+  status     attendance_status
+  created_at DateTime?         @default(now()) @db.Timestamp(6)
+  qaris      qaris             @relation(fields: [qari_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  students   students          @relation(fields: [student_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+
+  @@unique([student_id, date], map: "student_attendance_student_id_date_idx")
+}
+
+/// This model has constraints using non-default deferring rules and requires additional setup for migrations. Visit https://pris.ly/d/constraint-deferring for more info.
+model students {
+  id                   Int                    @id @default(autoincrement())
+  roll_number          String                 @unique @db.VarChar(20)
+  full_name            String                 @db.VarChar(100)
+  track_type           student_type
+  parent_id            Int
+  class_id             Int
+  created_at           DateTime?              @default(now()) @db.Timestamp(6)
+  chat_threads         chat_threads[]
+  daily_hifz_reports   daily_hifz_reports[]
+  daily_nazra_reports  daily_nazra_reports[]
+  daily_parent_reports daily_parent_reports[]
+  leave_requests       leave_requests[]
+  student_attendance   student_attendance[]
+  classes              classes                @relation(fields: [class_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  parents              parents                @relation(fields: [parent_id], references: [id], onDelete: NoAction, onUpdate: NoAction)
+}
+
+model users {
+  id             Int              @id @default(autoincrement())
+  email          String           @unique(map: "users_phone_number_key") @db.VarChar(255)
+  password_hash  String           @db.VarChar(255)
+  role           role_type
+  full_name      String           @db.VarChar(100)
+  created_at     DateTime?        @default(now()) @db.Timestamp(6)
+  chat_messages  chat_messages[]
+  parents        parents?
+  qaris          qaris?
+  refresh_tokens refresh_tokens[]
+}
+
+enum attendance_status {
+  PRESENT
+  ABSENT
+  LEAVE
+}
+
+enum leave_status {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum role_type {
+  QARI
+  PARENT
+}
+
+enum student_type {
+  HIFZ
+  NAZRA
+}
+
+model refresh_tokens {
+  id         Int      @id @default(autoincrement())
+  user_id    Int
+  token_hash String   @db.VarChar(255)
+  revoked    Boolean  @default(false)
+  expires_at DateTime @db.Timestamp(6)
+  created_at DateTime @default(now()) @db.Timestamp(6)
+
+  user users @relation(fields: [user_id], references: [id], onDelete: Cascade)
+}
+
+model otp {
+  id         Int      @id @default(autoincrement())
+  email      String   @unique
+  code       String
+  expires_at DateTime
+  created_at DateTime @default(now())
+}
