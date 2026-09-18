@@ -49,6 +49,15 @@ export default function ParentTabLayout() {
         },
       }}
     >
+      {/* 🚫 Hide Index Tab completely from Bottom Bar */}
+      <Tabs.Screen
+        name="index"
+        options={{
+          href: null,
+          tabBarItemStyle: { display: 'none' },
+        }}
+      />
+
       {PARENT_TAB_CONFIG.map((tab) => (
         <Tabs.Screen
           key={tab.name}
