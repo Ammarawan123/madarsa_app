@@ -16,32 +16,44 @@ export function useLogin() {
   const handleLogin = useCallback(async () => {
     const cleanEmail = email.toLowerCase().replace(/[\s\n\r]+/g, '').trim();
 
+    setEmailError(null);
+    setPasswordError(null);
+
+    // Basic Validations
     if (!cleanEmail) {
       setEmailError('برائے کرم ای میل درج کریں');
+      return;
+    }
+
+    if (!password) {
+      setPasswordError('برائے کرم پاس ورڈ درج کریں');
       return;
     }
 
     if (isSubmitting.current) return;
     isSubmitting.current = true;
     setIsLoading(true);
-    setEmailError(null);
 
     try {
-      // 1. Force Send OTP to trigger DB creation
-      const response = await fetch(`${API_URL}/api/otp/send`, {
+      // 1. Hit Auth Login Endpoint with email & password
+      const response = await fetch(`${API_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: cleanEmail }),
+        body: JSON.stringify({ 
+          email: cleanEmail, 
+          password: password 
+        }),
       });
 
       const data = await response.json();
 
+      // 2. Check if password validation failed (401 / error)
       if (!response.ok || !data.success) {
-        setEmailError(data.message || 'OTP ارسال کرنے میں ناکامی');
-        return;
+        setPasswordError(data.message || 'غلط ای میل یا پاس ورڈ');
+        return; // STOP execution on invalid password
       }
 
-      // 2. Only navigate AFTER DB write is confirmed
+      // 3. Navigate to OTP screen ONLY after successful password verification
       router.push({
         pathname: '/otp',
         params: { email: encodeURIComponent(cleanEmail) },
@@ -52,7 +64,7 @@ export function useLogin() {
       setIsLoading(false);
       isSubmitting.current = false;
     }
-  }, [email, router]);
+  }, [email, password, router]);
 
   return {
     email,

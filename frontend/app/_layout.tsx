@@ -11,8 +11,10 @@ export default function RootLayout() {
       <Stack screenOptions={{ headerShown: false }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="login" />
+        <Stack.Screen name="otp" />
         <Stack.Screen name="check-in" />
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="(parent-tabs)" />
         <Stack.Screen name="student-history/[studentId]" />
         <Stack.Screen name="roznama/[studentId]" />
         <Stack.Screen name="roznama/preview/[studentId]" />

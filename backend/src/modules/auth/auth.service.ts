@@ -1,49 +1,70 @@
 import { FastifyInstance } from 'fastify';
+import * as bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
+import { OtpRepository } from '../otp/otp.repository'; // 👈 OtpRepository import karein
 import { hashToken } from '../../utils/token';
 import { sendOtpEmail } from '../../utils/mailer';
 import prisma from '../../config/db';
 
 export class AuthService {
   private static authRepository = new AuthRepository();
+  private static otpRepository = new OtpRepository(); // 👈 Instance create karein
 
-  // 1. Initiate Login (OTP Generation + Terminal Print + Email Send)
+  // 1. Initiate Login (OTP Generation + Password Verification)
   static async initiateLogin(email: string, password: string) {
-    const user = await (prisma as any).users.findUnique({ where: { email } });
+    const cleanEmail = email.trim().toLowerCase();
 
-    // Guard Clause: Check User Existence
-    if (!user) {
-      throw new Error('INVALID_CREDENTIALS');
-    }
+    // User find karein
+    const user = await (prisma as any).users.findUnique({ 
+      where: { email: cleanEmail } 
+    });
 
-    // Passwords verification (Simple string or bcrypt)
-    if (user.password && user.password !== password) {
-      throw new Error('INVALID_CREDENTIALS');
-    }
+    user || (() => { throw new Error('INVALID_CREDENTIALS'); })();
 
-    // Random 6-digit OTP generate karein
+    // Password verification (bcrypt vs plaintext handling)
+    const storedHash = user.password_hash || user.password || '';
+    const isBcrypt = storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$') || storedHash.startsWith('$2y$');
+
+    const isPasswordValid = isBcrypt
+      ? await bcrypt.compare(password, storedHash)
+      : password === storedHash;
+
+    isPasswordValid || (() => { throw new Error('INVALID_CREDENTIALS'); })();
+
+    // 6-digit OTP code generate karein
     const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-   
+    // 💾 OtpRepository se DB mein save karein (Sahi Table Name: prisma.otp)
+    await this.otpRepository.createOtp(cleanEmail, otpCode, expiresAt);
 
-    // 📧 Real Email Par Mail Send Karein
+    // 📧 Mail send karein
     try {
-      await sendOtpEmail(email, otpCode);
+      await sendOtpEmail(cleanEmail, otpCode);
     } catch (error) {
-      console.error('⚠️ Email sending failed, check .env credentials:', error);
+      console.error('⚠️ Email sending failed:', error);
     }
 
-    return { message: 'Password verified. OTP sent to your email.', email };
+    return { message: 'Password verified. OTP sent to your email.', email: cleanEmail };
   }
 
   // 2. Complete Login (Verify OTP)
   static async completeLogin(email: string, code: string) {
-    const user = await (prisma as any).users.findUnique({ where: { email } });
+    const cleanEmail = email.trim().toLowerCase();
 
-    // Guard Clause: Validate User
-    if (!user) {
+    // 🔎 OtpRepository ka findOtp method use karke verify karein
+    const otpRecord = await this.otpRepository.findOtp(cleanEmail, code);
+
+    if (!otpRecord) {
       throw new Error('INVALID_OR_EXPIRED_OTP');
     }
+
+    // User find karein
+    const user = await (prisma as any).users.findUnique({ where: { email: cleanEmail } });
+    user || (() => { throw new Error('INVALID_OR_EXPIRED_OTP'); })();
+
+    // 🧹 Verification ke baad OTP delete kar dein
+    await this.otpRepository.deleteOtp(otpRecord.id);
 
     return user;
   }
@@ -54,7 +75,7 @@ export class AuthService {
     const refreshToken = (fastify as any).jwt.sign({ id: userId, role }, { expiresIn: '7d' });
 
     const tokenHash = hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 Days expiry
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await this.authRepository.saveRefreshToken(userId, tokenHash, expiresAt);
 
@@ -63,19 +84,13 @@ export class AuthService {
 
   // 4. Generate new Access Token using valid Refresh Token
   static async refreshAccessToken(fastify: FastifyInstance, refreshToken: string) {
-    // 1. Verify JWT signature & structure
     const decoded = (fastify as any).jwt.verify(refreshToken) as { id: number; role: string };
 
-    // 2. Check DB status
     const tokenHash = hashToken(refreshToken);
     const storedToken = await this.authRepository.findValidToken(tokenHash, decoded.id);
 
-    // Guard Clause: Early Return if token is missing or revoked
-    if (!storedToken) {
-      throw new Error('INVALID_OR_REVOKED_TOKEN');
-    }
+    storedToken || (() => { throw new Error('INVALID_OR_REVOKED_TOKEN'); })();
 
-    // 3. Generate new Access Token
     return (fastify as any).jwt.sign({ id: decoded.id, role: decoded.role }, { expiresIn: '15m' });
   }
 

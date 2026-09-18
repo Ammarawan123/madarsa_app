@@ -99,8 +99,8 @@ export function useOtp() {
       }
 
       // Safe Extraction of User Role
-      const responseUser = data.data?.user || data.user;
-      const rawRole = responseUser?.role || '';
+      const responseUser = data?.data?.user || data?.user || data?.data;
+      const rawRole = responseUser?.role || data?.role || '';
       const userRole = String(rawRole).trim().toUpperCase();
 
       console.log('✅ OTP Verified. Role Detected:', userRole);
