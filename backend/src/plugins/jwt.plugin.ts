@@ -1,27 +1,40 @@
 import fp from 'fastify-plugin';
 import fastifyJwt from '@fastify/jwt';
-import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
+import {
+  FastifyInstance,
+  FastifyRequest,
+  FastifyReply,
+} from 'fastify';
 
-// Fastify type definition ko extend kar rahe hain taake TypeScript compiler error na de
 declare module 'fastify' {
   interface FastifyInstance {
-    authenticate: (request: FastifyRequest, reply: FastifyReply) => Promise<void>;
+    authenticate: (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) => Promise<void>;
   }
 }
 
 export default fp(async function (fastify: FastifyInstance) {
-  // Fastify JWT Plugin Register
+  const jwtSecret = process.env.JWT_SECRET;
+
+  if (!jwtSecret) {
+    throw new Error('JWT_SECRET is missing in .env');
+  }
+
   await fastify.register(fastifyJwt, {
-    secret: process.env.JWT_SECRET || 'super-secret-key-madarsa-app-2026',
+    secret: jwtSecret,
     sign: {
-      expiresIn: '15m', // Access Token duration
+      expiresIn: '15m',
     },
   });
 
-  // Authentication Decorator Guard
   fastify.decorate(
     'authenticate',
-    async function (request: FastifyRequest, reply: FastifyReply) {
+    async function (
+      request: FastifyRequest,
+      reply: FastifyReply
+    ) {
       try {
         await request.jwtVerify();
       } catch (err) {

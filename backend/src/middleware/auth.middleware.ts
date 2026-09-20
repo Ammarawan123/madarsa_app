@@ -1,6 +1,5 @@
 import { FastifyRequest, FastifyReply } from 'fastify';
 
-// Allowed roles type definition
 export type UserRole = 'QARI' | 'PARENT';
 
 /**
@@ -10,7 +9,7 @@ export async function authenticate(request: FastifyRequest, reply: FastifyReply)
   try {
     await request.jwtVerify();
   } catch (err) {
-    reply.status(401).send({
+    return reply.status(401).send({
       success: false,
       message: 'Unauthorized: Access token missing or invalid',
     });
@@ -26,20 +25,18 @@ export function authorizeRole(allowedRoles: UserRole[]) {
 
     // Guard Clause 1: User context missing
     if (!user || !user.role) {
-      reply.status(401).send({
+      return reply.status(401).send({
         success: false,
         message: 'Unauthorized access. User context missing.',
       });
-      return;
     }
 
     // Guard Clause 2: Check if user's role exists in allowedRoles
     if (!allowedRoles.includes(user.role)) {
-      reply.status(403).send({
+      return reply.status(403).send({
         success: false,
         message: `Forbidden: This resource is restricted to [${allowedRoles.join(', ')}] only.`,
       });
-      return;
     }
   };
 }

@@ -1,5 +1,6 @@
 import { OtpRepository } from './otp.repository';
-import { transporter } from '../../config/mail';
+import { sendOtpEmail } from '../../utils/mailer';
+import { generateOTP } from '../../utils/otp-generator';
 import prisma from '../../config/db';
 
 export class OtpService {
@@ -12,30 +13,20 @@ export class OtpService {
   // Send OTP via Real Email
   async sendOtp(email: string) {
     const cleanEmail = email.toLowerCase().replace(/[\s\n\r]+/g, '').trim();
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    
+    // Crypto Utility se 6 Digit OTP Generate
+    const code = generateOTP(6); 
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 5 Minutes Validity
 
-    // 1. Purane record clean karein
+    // 1. Purane OTP record clean karein
     await this.otpRepository.deleteExistingOtp(cleanEmail);
 
     // 2. DB Record Creation WITH Audit Log
     const createdOtp = await this.otpRepository.createOtp(cleanEmail, code, expiresAt);
     console.log("✅ [DB AUDIT] OTP Record Created Successfully:", createdOtp);
 
-    // 3. Email Dispatch
-    await transporter.sendMail({
-      from: `"Madarsa App" <${process.env.EMAIL_USER}>`,
-      to: cleanEmail,
-      subject: 'Your Verification OTP Code',
-      html: `
-        <div style="font-family: Arial, sans-serif; padding: 20px;">
-          <h2>Email Verification Code</h2>
-          <p>Aapka verification code yeh hai:</p>
-          <h1 style="color: #4CAF50; letter-spacing: 4px;">${code}</h1>
-          <p>Yeh code 5 minutes mein expire ho jayega.</p>
-        </div>
-      `,
-    });
+    // 3. Email Dispatch via Mailer Util
+    await sendOtpEmail(cleanEmail, code);
 
     return { email: cleanEmail, expiresAt };
   }

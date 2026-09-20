@@ -1,7 +1,12 @@
 import { RoznamchaRepository } from './roznamcha.repository';
+import { getFormattedAttendanceDateUrdu } from '../../utils/date-formatter';
 
 export interface IQariReportStrategy {
-  processAndSave(repo: RoznamchaRepository, qariId: number, body: any): Promise<any>;
+  processAndSave(
+    repo: RoznamchaRepository,
+    qariId: number,
+    body: any
+  ): Promise<any>;
 }
 
 export class HifzReportStrategy implements IQariReportStrategy {
@@ -63,7 +68,9 @@ export class RoznamchaService {
     return this.repo.upsertParentReport({
       student_id: Number(body.student_id),
       parent_id: parent.id,
-      home_arrival_time: body.home_arrival_time ? new Date(body.home_arrival_time) : undefined,
+      home_arrival_time: body.home_arrival_time
+        ? new Date(body.home_arrival_time)
+        : undefined,
       fajr_offered: Boolean(body.fajr_offered),
       zuhr_offered: Boolean(body.zuhr_offered),
       asr_offered: Boolean(body.asr_offered),
@@ -76,12 +83,24 @@ export class RoznamchaService {
     });
   }
 
-  async getStudentDailyReport(studentId: number, loggedInUserId: number, role: string) {
+  async getStudentDailyReport(
+    studentId: number,
+    loggedInUserId: number,
+    role: string
+  ) {
     const isParentRole = role === 'PARENT';
-    const isMyChild = isParentRole ? await this.repo.checkParentAccess(loggedInUserId, studentId) : true;
+    const isMyChild = isParentRole
+      ? await this.repo.checkParentAccess(loggedInUserId, studentId)
+      : true;
 
     if (!isMyChild) throw new Error('FORBIDDEN_NOT_YOUR_CHILD');
 
-    return this.repo.getCombinedReport(studentId);
+    const report = await this.repo.getCombinedReport(studentId);
+    const dateInfo = getFormattedAttendanceDateUrdu(new Date());
+
+    return {
+      dateInfo, // Urdu Gregorian aur Hijri dates for frontend card header
+      report,
+    };
   }
 }

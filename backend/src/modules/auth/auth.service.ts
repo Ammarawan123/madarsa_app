@@ -1,78 +1,103 @@
 import { FastifyInstance } from 'fastify';
-import * as bcrypt from 'bcryptjs';
 import { AuthRepository } from './auth.repository';
-import { OtpRepository } from '../otp/otp.repository'; // 👈 OtpRepository import karein
+import { OtpRepository } from '../otp/otp.repository';
 import { hashToken } from '../../utils/token';
 import { sendOtpEmail } from '../../utils/mailer';
+import { comparePassword } from '../../utils/hash';
+import { generateOTP } from '../../utils/otp-generator';
 import prisma from '../../config/db';
+
+export type UserRole = 'QARI' | 'PARENT';
 
 export class AuthService {
   private static authRepository = new AuthRepository();
-  private static otpRepository = new OtpRepository(); // 👈 Instance create karein
+  private static otpRepository = new OtpRepository();
 
-  // 1. Initiate Login (OTP Generation + Password Verification)
+  // 1. Initiate Login (Password Verification + OTP Generation)
   static async initiateLogin(email: string, password: string) {
     const cleanEmail = email.trim().toLowerCase();
 
-    // User find karein
-    const user = await (prisma as any).users.findUnique({ 
-      where: { email: cleanEmail } 
+    // User Find Karein
+    const user = await prisma.users.findUnique({
+      where: { email: cleanEmail },
     });
 
-    user || (() => { throw new Error('INVALID_CREDENTIALS'); })();
+    if (!user) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
 
-    // Password verification (bcrypt vs plaintext handling)
-    const storedHash = user.password_hash || user.password || '';
-    const isBcrypt = storedHash.startsWith('$2a$') || storedHash.startsWith('$2b$') || storedHash.startsWith('$2y$');
+    // Password Verification
+    const storedHash = user.password_hash || '';
+    const isBcrypt =
+      storedHash.startsWith('$2a$') ||
+      storedHash.startsWith('$2b$') ||
+      storedHash.startsWith('$2y$');
 
     const isPasswordValid = isBcrypt
-      ? await bcrypt.compare(password, storedHash)
+      ? await comparePassword(password, storedHash)
       : password === storedHash;
 
-    isPasswordValid || (() => { throw new Error('INVALID_CREDENTIALS'); })();
+    if (!isPasswordValid) {
+      throw new Error('INVALID_CREDENTIALS');
+    }
 
-    // 6-digit OTP code generate karein
-    const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+    // Secure Crypto OTP Generator
+    const otpCode = generateOTP(6);
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
 
-    // 💾 OtpRepository se DB mein save karein (Sahi Table Name: prisma.otp)
+    // Save OTP to DB
     await this.otpRepository.createOtp(cleanEmail, otpCode, expiresAt);
 
-    // 📧 Mail send karein
+    // Email Dispatch
     try {
       await sendOtpEmail(cleanEmail, otpCode);
     } catch (error) {
       console.error('⚠️ Email sending failed:', error);
     }
 
-    return { message: 'Password verified. OTP sent to your email.', email: cleanEmail };
+    return {
+      message: 'Password verified. OTP sent to your email.',
+      email: cleanEmail,
+    };
   }
 
   // 2. Complete Login (Verify OTP)
   static async completeLogin(email: string, code: string) {
     const cleanEmail = email.trim().toLowerCase();
 
-    // 🔎 OtpRepository ka findOtp method use karke verify karein
+    // Verify OTP Record
     const otpRecord = await this.otpRepository.findOtp(cleanEmail, code);
 
     if (!otpRecord) {
       throw new Error('INVALID_OR_EXPIRED_OTP');
     }
 
-    // User find karein
-    const user = await (prisma as any).users.findUnique({ where: { email: cleanEmail } });
-    user || (() => { throw new Error('INVALID_OR_EXPIRED_OTP'); })();
+    // User Find Karein
+    const user = await prisma.users.findUnique({
+      where: { email: cleanEmail },
+    });
 
-    // 🧹 Verification ke baad OTP delete kar dein
+    if (!user) {
+      throw new Error('INVALID_OR_EXPIRED_OTP');
+    }
+
+    // Delete OTP after successful verification
     await this.otpRepository.deleteOtp(otpRecord.id);
 
     return user;
   }
 
   // 3. Issue Access Token & Refresh Token pair
-  static async issueTokens(fastify: FastifyInstance, userId: number, role: string) {
-    const accessToken = (fastify as any).jwt.sign({ id: userId, role }, { expiresIn: '15m' });
-    const refreshToken = (fastify as any).jwt.sign({ id: userId, role }, { expiresIn: '7d' });
+  static async issueTokens(
+    fastify: FastifyInstance,
+    userId: number,
+    role: string
+  ) {
+    // Payload ko explicitly type cast kar ke sign karein
+    const payload = { id: userId, role } as any;
+
+    const accessToken = fastify.jwt.sign(payload, { expiresIn: '15m' });
+    const refreshToken = fastify.jwt.sign(payload, { expiresIn: '7d' });
 
     const tokenHash = hashToken(refreshToken);
     const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -83,15 +108,25 @@ export class AuthService {
   }
 
   // 4. Generate new Access Token using valid Refresh Token
-  static async refreshAccessToken(fastify: FastifyInstance, refreshToken: string) {
-    const decoded = (fastify as any).jwt.verify(refreshToken) as { id: number; role: string };
+  static async refreshAccessToken(
+    fastify: FastifyInstance,
+    refreshToken: string
+  ) {
+    const decoded = fastify.jwt.verify(refreshToken) as any;
 
     const tokenHash = hashToken(refreshToken);
-    const storedToken = await this.authRepository.findValidToken(tokenHash, decoded.id);
+    const storedToken = await this.authRepository.findValidToken(
+      tokenHash,
+      decoded.id
+    );
 
-    storedToken || (() => { throw new Error('INVALID_OR_REVOKED_TOKEN'); })();
+    if (!storedToken) {
+      throw new Error('INVALID_OR_REVOKED_TOKEN');
+    }
 
-    return (fastify as any).jwt.sign({ id: decoded.id, role: decoded.role }, { expiresIn: '15m' });
+    const payload = { id: decoded.id, role: decoded.role } as any;
+
+    return fastify.jwt.sign(payload, { expiresIn: '15m' });
   }
 
   // 5. Revoke token on logout
