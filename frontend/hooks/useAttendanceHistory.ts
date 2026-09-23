@@ -1,26 +1,40 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { attendanceService } from '@/services/attendance/AttendanceService';
 import { AttendanceHistoryItem } from '@/types/attendance-marking.types';
 
-export function useAttendanceHistory(classId: string = 'class-alif') {
+export function useAttendanceHistory(
+  month?: number,
+  classId: string = 'class-alif'
+) {
   const [list, setList] = useState<AttendanceHistoryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  const isFetchingRef = useRef(false);
+
   const loadHistory = useCallback(async () => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+
     setIsLoading(true);
     setErrorMessage(null);
 
     try {
-      const data = await attendanceService.getAttendanceHistoryList(classId);
+      const data = await attendanceService.getAttendanceHistoryList(classId, month);
       setList(data);
-    } catch {
-      setErrorMessage('فہرست لوڈ نہیں ہو سکی');
+    } catch (err: any) {
+      const isRateLimit = err?.response?.status === 429;
+      setErrorMessage(
+        isRateLimit
+          ? 'درخواستوں کی حد ختم ہو گئی۔ براہ کرم تھوڑی دیر بعد کوشش کریں۔'
+          : 'فہرست لوڈ نہیں ہو سکی'
+      );
     } finally {
       setIsLoading(false);
+      isFetchingRef.current = false;
     }
-  }, [classId]);
+  }, [classId, month]);
 
   useEffect(() => {
     loadHistory();

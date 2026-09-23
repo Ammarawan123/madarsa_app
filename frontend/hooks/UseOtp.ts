@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { TextInput } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import AsyncStorage from '@react-native-async-storage/async-storage'; // 👈 1. Added Import
 import { Strings } from '@/constants/strings';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL?.trim();
@@ -98,6 +99,18 @@ export function useOtp() {
         return;
       }
 
+      // 🚨 2. TOKEN EXTRACTION & STORAGE SAVE FIX
+      const extractedToken = data?.token || data?.data?.token || data?.accessToken;
+
+      if (extractedToken) {
+        // Interceptor aur Axios compatibility ke liye dono keys write kar rahe hain
+        await AsyncStorage.setItem('userToken', extractedToken);
+        await AsyncStorage.setItem('token', extractedToken);
+        console.log('✅ Token successfully saved to AsyncStorage!');
+      } else {
+        console.warn('⚠️ Warning: Token backend response me nahi mila!');
+      }
+
       // Safe Extraction of User Role
       const responseUser = data?.data?.user || data?.user || data?.data;
       const rawRole = responseUser?.role || data?.role || '';
@@ -115,7 +128,7 @@ export function useOtp() {
 
       console.log('🚀 Redirecting to:', targetRoute);
 
-      // Execute replace navigation
+      // Execute replace navigation AFTER token is saved
       router.replace(targetRoute as any);
     } catch (err) {
       console.error('Verify Request Exception:', err);

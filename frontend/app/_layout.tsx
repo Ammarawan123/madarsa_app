@@ -3,6 +3,11 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/theme';
+import { attendanceService } from '@/services/attendance/AttendanceService';
+import { ApiAttendanceStrategy } from '@/services/attendance/ApiAttendanceStrategy';
+
+// App load hote hi API strategy set ho jayegi
+attendanceService.setStrategy(new ApiAttendanceStrategy());
 
 export default function RootLayout() {
   return (
@@ -19,7 +24,6 @@ export default function RootLayout() {
         <Stack.Screen name="roznama/[studentId]" />
         <Stack.Screen name="roznama/preview/[studentId]" />
         <Stack.Screen name="roznama/view/[studentId]" />
-
       </Stack>
     </SafeAreaProvider>
   );

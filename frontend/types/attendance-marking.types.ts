@@ -25,10 +25,19 @@ export interface DailyAttendanceEntry {
   status: 'present' | 'absent' | 'leave';
 }
 
+
 export interface StudentHistoryDetail {
-  studentName: string;
-  grade: string;
-  rollNumber: string;
-  monthLabel: string;
-  entries: DailyAttendanceEntry[];
+  id?: string;
+  name?: string;
+  grade?: string;
+  rollNumber?: string;
+  monthName?: string;
+  history?: Array<{
+    id?: string;
+    date?: string;
+    formattedDate?: string;
+    dayName?: string;
+    status?: string;
+    badgeType?: string;
+  }>;
 }

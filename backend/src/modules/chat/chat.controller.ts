@@ -18,7 +18,7 @@ function mapChatErrorToStatus(message: string): number {
 }
 
 export async function getContactsHandler(request: FastifyRequest, reply: FastifyReply) {
-  const user = request.user as { id: number; role: string; roleRecordId: number };
+  const user = request.user as unknown as { id: number; role: string; roleRecordId: number };
   const { search } = request.query as { search?: string };
 
   try {
@@ -33,7 +33,7 @@ export async function getContactsHandler(request: FastifyRequest, reply: Fastify
 }
 
 export async function openThreadHandler(request: FastifyRequest, reply: FastifyReply) {
-  const user = request.user as { id: number; role: string; roleRecordId: number };
+  const user = request.user as unknown as { id: number; role: string; roleRecordId: number };
   const { studentId } = request.body as { studentId: number };
 
   try {

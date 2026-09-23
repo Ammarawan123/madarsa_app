@@ -25,7 +25,6 @@ export default function ParentHomeScreen() {
     errorMessage,
   } = useParentDashboard();
 
-  // Early return — Loading
   if (isLoading && !student) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -34,7 +33,6 @@ export default function ParentHomeScreen() {
     );
   }
 
-  // Early return — Error
   if (errorMessage && !student) {
     return (
       <SafeAreaView style={styles.centered}>
@@ -44,8 +42,8 @@ export default function ParentHomeScreen() {
   }
 
   const handleStartRoznama = () => {
-    if (isSubmittedToday) return;
-    router.push(`/parent/roznama/${student?.id || 'std-1'}`);
+    if (isSubmittedToday || !student?.id) return;
+    router.push(`/parent/roznama/${student.id}`);
   };
 
   return (
@@ -54,7 +52,6 @@ export default function ParentHomeScreen() {
         contentContainerStyle={styles.contentContainer}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top Header matching Image 4 */}
         <View style={styles.header}>
           <View style={styles.headerIcons}>
             <IconCircle
@@ -66,21 +63,20 @@ export default function ParentHomeScreen() {
           </View>
 
           <View style={styles.studentHeaderInfo}>
-            <Text style={styles.studentName}>{student?.name || 'عبداللہ احمد'}</Text>
+            <Text style={styles.studentName}>{student?.name || '—'}</Text>
             <View style={styles.presentBadge}>
               <Text style={styles.presentBadgeText}>حاضر</Text>
             </View>
           </View>
         </View>
 
-        {/* Green Class & Qari Info Card matching Image 4 */}
         <View style={styles.greenInfoCard}>
           <View style={styles.infoRow}>
             <Text style={styles.infoTextLeft}>
-              {student?.gregorianDate || 'بدھ، ۳ جون ۲۰۲۶'}
+              {student?.gregorianDate || '—'}
             </Text>
             <Text style={styles.infoTextRight}>
-              قاری: {student?.qariName || 'محمد عثمان'}
+              قاری: {student?.qariName || '—'}
             </Text>
           </View>
 
@@ -88,20 +84,19 @@ export default function ParentHomeScreen() {
 
           <View style={styles.infoRow}>
             <Text style={styles.infoTextLeft}>
-              {student?.hijriDate || '۲ ذو الحجہ، ۱۴۲۷ھ'}
+              {student?.hijriDate || '—'}
             </Text>
             <Text style={styles.infoTextRight}>
-              جماعت: {student?.className || 'الف(حفظ)'}
+              جماعت: {student?.className || '—'}
             </Text>
           </View>
         </View>
 
-        {/* Stats Section: موجودہ پارہ & مکمل شدہ سپارے */}
         <View style={styles.statsRow}>
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>موجودہ پارہ</Text>
             <Text style={styles.statValueCurrent}>
-              {toUrduDigits(student?.currentParaNumber || 16)} {student?.currentParaName || 'قَال أَلَمْ'}
+              {toUrduDigits(student?.currentParaNumber ?? 0)} {student?.currentParaName || ''}
             </Text>
           </View>
 
@@ -110,12 +105,11 @@ export default function ParentHomeScreen() {
           <View style={styles.statCard}>
             <Text style={styles.statLabel}>مکمل شدہ سپارے</Text>
             <Text style={styles.statValueTotal}>
-              {toUrduDigits(student?.completedParas || 25)}/{toUrduDigits(student?.totalParas || 30)}
+              {toUrduDigits(student?.completedParas ?? 0)}/{toUrduDigits(student?.totalParas ?? 30)}
             </Text>
           </View>
         </View>
 
-        {/* Dynamic Roznama Submission Card matching Image 4 */}
         {isSubmittedToday ? (
           <View style={styles.submittedCard}>
             <Ionicons
@@ -142,7 +136,6 @@ export default function ParentHomeScreen() {
           </TouchableOpacity>
         )}
 
-        {/* Daily Performance History Section */}
         <View style={styles.historySectionHeader}>
           <TouchableOpacity style={styles.seeMoreRow} activeOpacity={0.7}>
             <Text style={styles.seeMoreText}>مزید دیکھیں</Text>
@@ -157,8 +150,7 @@ export default function ParentHomeScreen() {
           <Text style={styles.historySectionTitle}>روزمرہ کارکردگی</Text>
         </View>
 
-        {/* Performance Cards List */}
-        {performanceHistory.map((item) => (
+        {performanceHistory && performanceHistory.map((item) => (
           <View key={item.id} style={styles.historyCard}>
             <TouchableOpacity
               style={styles.viewPerformanceButton}
@@ -182,203 +174,36 @@ export default function ParentHomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  safeArea: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  centered: {
-    flex: 1,
-    backgroundColor: Colors.background,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  errorText: {
-    ...Typography.subtitle,
-    color: Colors.error,
-  },
-  contentContainer: {
-    paddingHorizontal: Spacing.md,
-    paddingTop: Spacing.xs,
-    paddingBottom: Spacing.xl,
-  },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.md,
-  },
-  headerIcons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  studentHeaderInfo: {
-    alignItems: 'flex-end',
-  },
-  studentName: {
-    ...Typography.title,
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#181815',
-    textAlign: 'right',
-  },
-  presentBadge: {
-    backgroundColor: '#3F725F',
-    paddingHorizontal: 14,
-    paddingVertical: 3,
-    borderRadius: 999,
-    marginTop: 4,
-  },
-  presentBadgeText: {
-    ...Typography.hint,
-    color: '#FFFFFF',
-    fontSize: 13,
-    fontWeight: '700',
-  },
-  greenInfoCard: {
-    backgroundColor: '#3F725F',
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    marginBottom: Spacing.md,
-  },
-  infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  infoTextLeft: {
-    ...Typography.hint,
-    fontSize: 14,
-    color: '#FFFFFF',
-  },
-  infoTextRight: {
-    ...Typography.label,
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
-  infoDivider: {
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    marginVertical: 10,
-  },
-  statsRow: {
-    flexDirection: 'row',
-    marginBottom: Spacing.md,
-  },
-  statCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#7DA998',
-    padding: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  statLabel: {
-    ...Typography.hint,
-    fontSize: 15,
-    color: '#40554D',
-    marginBottom: 6,
-  },
-  statValueTotal: {
-    ...Typography.title,
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#181815',
-  },
-  statValueCurrent: {
-    ...Typography.title,
-    fontSize: 22,
-    fontWeight: '700',
-    color: '#181815',
-  },
-  submittedCard: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#7DA998',
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginBottom: Spacing.lg,
-  },
-  submittedText: {
-    ...Typography.label,
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#3F725F',
-  },
-  actionRoznamaCard: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#3F725F',
-    borderRadius: 14,
-    paddingVertical: 14,
-    marginBottom: Spacing.lg,
-  },
-  actionRoznamaText: {
-    ...Typography.label,
-    fontSize: 18,
-    fontWeight: '700',
-    color: '#FFFFFF',
-  },
-  historySectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: Spacing.sm,
-  },
-  historySectionTitle: {
-    ...Typography.sectionHeading,
-    fontSize: 20,
-    fontWeight: '700',
-    color: '#181815',
-  },
-  seeMoreRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  seeMoreText: {
-    ...Typography.hint,
-    fontSize: 14,
-    color: Colors.primary,
-    fontWeight: '600',
-  },
-  historyCard: {
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1,
-    borderColor: '#A6C5B8',
-    borderRadius: 14,
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    marginBottom: 10,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  historyDateText: {
-    ...Typography.label,
-    fontSize: 16,
-    fontWeight: '700',
-    color: '#181815',
-    textAlign: 'right',
-  },
-  viewPerformanceButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#3F725F',
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 999,
-  },
-  viewPerformanceText: {
-    ...Typography.hint,
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#FFFFFF',
-  },
+  safeArea: { flex: 1, backgroundColor: Colors.background },
+  centered: { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center' },
+  errorText: { ...Typography.subtitle, color: Colors.error },
+  contentContainer: { paddingHorizontal: Spacing.md, paddingTop: Spacing.xs, paddingBottom: Spacing.xl },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
+  headerIcons: { flexDirection: 'row', alignItems: 'center' },
+  studentHeaderInfo: { alignItems: 'flex-end' },
+  studentName: { ...Typography.title, fontSize: 24, fontWeight: '700', color: '#181815', textAlign: 'right' },
+  presentBadge: { backgroundColor: '#3F725F', paddingHorizontal: 14, paddingVertical: 3, borderRadius: 999, marginTop: 4 },
+  presentBadgeText: { ...Typography.hint, color: '#FFFFFF', fontSize: 13, fontWeight: '700' },
+  greenInfoCard: { backgroundColor: '#3F725F', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 14, marginBottom: Spacing.md },
+  infoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  infoTextLeft: { ...Typography.hint, fontSize: 14, color: '#FFFFFF' },
+  infoTextRight: { ...Typography.label, fontSize: 15, fontWeight: '600', color: '#FFFFFF' },
+  infoDivider: { height: 1, backgroundColor: 'rgba(255, 255, 255, 0.2)', marginVertical: 10 },
+  statsRow: { flexDirection: 'row', marginBottom: Spacing.md },
+  statCard: { flex: 1, backgroundColor: '#FFFFFF', borderRadius: 16, borderWidth: 1, borderColor: '#7DA998', padding: 14, alignItems: 'center', justifyContent: 'center' },
+  statLabel: { ...Typography.hint, fontSize: 15, color: '#40554D', marginBottom: 6 },
+  statValueTotal: { ...Typography.title, fontSize: 28, fontWeight: '700', color: '#181815' },
+  statValueCurrent: { ...Typography.title, fontSize: 22, fontWeight: '700', color: '#181815' },
+  submittedCard: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#7DA998', borderRadius: 14, paddingVertical: 14, marginBottom: Spacing.lg },
+  submittedText: { ...Typography.label, fontSize: 18, fontWeight: '600', color: '#3F725F' },
+  actionRoznamaCard: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#3F725F', borderRadius: 14, paddingVertical: 14, marginBottom: Spacing.lg },
+  actionRoznamaText: { ...Typography.label, fontSize: 18, fontWeight: '700', color: '#FFFFFF' },
+  historySectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.sm },
+  historySectionTitle: { ...Typography.sectionHeading, fontSize: 20, fontWeight: '700', color: '#181815' },
+  seeMoreRow: { flexDirection: 'row', alignItems: 'center' },
+  seeMoreText: { ...Typography.hint, fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  historyCard: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#A6C5B8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 12, marginBottom: 10, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  historyDateText: { ...Typography.label, fontSize: 16, fontWeight: '700', color: '#181815', textAlign: 'right' },
+  viewPerformanceButton: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#3F725F', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 999 },
+  viewPerformanceText: { ...Typography.hint, fontSize: 13, fontWeight: '600', color: '#FFFFFF' },
 });

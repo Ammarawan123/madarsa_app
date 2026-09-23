@@ -4,8 +4,9 @@ import rateLimit from '@fastify/rate-limit';
 
 const rateLimitPlugin: FastifyPluginAsync = async (fastify: FastifyInstance) => {
   await fastify.register(rateLimit, {
-    max: 10, // Global limit: 1 minute mein 100 requests
+    max: process.env.NODE_ENV === 'production' ? 300 : 1000,
     timeWindow: '1 minute',
+    allowList: ['127.0.0.1', 'localhost'],
     errorResponseBuilder: (request, context) => ({
       statusCode: 429,
       error: 'Too Many Requests',

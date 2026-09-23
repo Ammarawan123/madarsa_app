@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, TouchableOpacity, Image } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { IconCircle } from '@/components/IconCircle/IconCircle';
 import { QuickActionButton } from '@/components/QuickActionButton/QuickActionButton';
 import { LeaveRequestCard } from '@/components/LeaveRequestCard/LeaveRequestCard';
@@ -11,14 +12,35 @@ import { LeaveRequest } from '@/types/home.types';
 
 const URDU_DIGITS: readonly string[] = ['۰', '۱', '۲', '۳', '۴', '۵', '۶', '۷', '۸', '۹'];
 
-export function toUrduDigits(value: number | string): string {
-  return String(value).replace(/[0-9]/g, (digit: string) => URDU_DIGITS[Number(digit)]);
+export function toUrduDigits(val: number | string | undefined | null): string {
+  if (val === undefined || val === null) return '۰';
+  if (typeof val === 'number' && isNaN(val)) return '۰';
+  const str = String(val);
+  if (!str.trim()) return '۰';
+  return str.replace(/[0-9]/g, (d) => URDU_DIGITS[Number(d)]);
+}
+
+export function formatJamaatName(name?: string): string {
+  if (!name || name === 'غیر مقرر') return 'جماعت: الف';
+  const trimmed = name.trim();
+  if (trimmed.startsWith('جماعت:')) return trimmed;
+  if (trimmed.startsWith('جماعت')) return `جماعت: ${trimmed.replace(/^جماعت[:\s]*/, '')}`;
+  if (trimmed === 'A' || trimmed.endsWith('- A') || trimmed.endsWith(' A')) return 'جماعت: الف';
+  if (trimmed === 'B' || trimmed.endsWith('- B') || trimmed.endsWith(' B')) return 'جماعت: ب';
+  return `جماعت: ${trimmed}`;
 }
 
 export default function HomeScreen(): React.JSX.Element {
   const router = useRouter();
-  const { data, isLoading, errorMessage, respondingId, respondToLeaveRequest } =
+  const { data, isLoading, errorMessage, reload, respondingId, respondToLeaveRequest } =
     useHomeDashboard();
+
+  // Trigger silent refetch inside useFocusEffect when navigating back to home
+  useFocusEffect(
+    useCallback(() => {
+      reload(true, true);
+    }, [reload])
+  );
 
   if (isLoading) {
     return (
@@ -32,11 +54,19 @@ export default function HomeScreen(): React.JSX.Element {
     return (
       <SafeAreaView style={styles.centered}>
         <Text style={styles.errorText}>{errorMessage ?? 'کوئی ڈیٹا موجود نہیں'}</Text>
+        <TouchableOpacity
+          onPress={() => reload()}
+          style={styles.retryButton}
+          activeOpacity={0.8}
+        >
+          <Text style={styles.retryButtonText}>دوبارہ کوشش کریں</Text>
+        </TouchableOpacity>
       </SafeAreaView>
     );
   }
 
   const { profile, classSummary, attendanceSummary, leaveRequests } = data;
+  const stats = attendanceSummary ?? (data as any)?.stats;
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -51,22 +81,22 @@ export default function HomeScreen(): React.JSX.Element {
             <IconCircle iconSource={require('@/assets/icons/message-icon.png')} />
           </View>
           <View>
-            <Text style={styles.profileName}>{profile.name}</Text>
-            <Text style={styles.profileRole}>{profile.role}</Text>
+            <Text style={styles.profileName}>{profile.name || 'حافظ محمد ابراہیم'}</Text>
+            <Text style={styles.profileRole}>قاری صاحب</Text>
           </View>
         </View>
 
         {/* Date + Class Card */}
         <View style={styles.dateCard}>
           <View style={styles.dateRow}>
-            <Text style={styles.dateText}>{classSummary.gregorianDate}</Text>
+            <Text style={styles.dateText}>{toUrduDigits(classSummary.gregorianDate)}</Text>
           </View>
 
           <View style={styles.dividerLine} />
 
           <View style={styles.classRow}>
-            <Text style={styles.islamicDateText}>{classSummary.hijriDate}</Text>
-            <Text style={styles.classPillText}>کلاس: {classSummary.className}</Text>
+            <Text style={styles.islamicDateText}>{toUrduDigits(classSummary.hijriDate)}</Text>
+            <Text style={styles.classPillText}>{formatJamaatName(classSummary.className)}</Text>
           </View>
         </View>
 
@@ -74,16 +104,16 @@ export default function HomeScreen(): React.JSX.Element {
         <View style={styles.statsRow}>
           {/* Attendance Card */}
           <View style={styles.statBox}>
-            <Text style={styles.statLabel} numberOfLines={1}>
-              <Text>حاضر</Text>
-              <Text style={{ opacity: 1 }}> / </Text>
-              <Text>غیر حاضر</Text>
-            </Text>
-            <Text style={styles.statValueRow} numberOfLines={1}>
-              <Text style={styles.presentDigit}>{toUrduDigits(attendanceSummary.presentCount)}</Text>
+            <Text style={styles.statLabel}>حاضر / غیر حاضر</Text>
+            <View style={styles.statDigitsRow}>
+              <Text style={styles.absentDigit}>
+                {toUrduDigits(stats?.absentCount ?? 0)}
+              </Text>
               <Text style={styles.slashChar}> / </Text>
-              <Text style={styles.absentDigit}>{toUrduDigits(attendanceSummary.absentCount)}</Text>
-            </Text>
+              <Text style={styles.presentDigit}>
+                {toUrduDigits(stats?.presentCount ?? 0)}
+              </Text>
+            </View>
           </View>
 
           <View style={styles.statsSpacer} />
@@ -92,7 +122,7 @@ export default function HomeScreen(): React.JSX.Element {
           <View style={styles.statBox}>
             <Text style={styles.statLabel}>کل طلبہ</Text>
             <Text style={styles.statValueTotal}>
-              {toUrduDigits(attendanceSummary.totalStudents)}
+              {toUrduDigits(stats?.totalStudents ?? 0)}
             </Text>
           </View>
         </View>
@@ -146,6 +176,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: { ...Typography.subtitle, color: Colors.error },
+  retryButton: {
+    marginTop: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    backgroundColor: Colors.primary,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#FFFFFF',
+    fontSize: 15,
+    fontWeight: '600',
+  },
   content: {
     paddingHorizontal: Spacing.lg,
     paddingTop: Spacing.md,
@@ -223,20 +265,28 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 40,
   },
-  statValueRow: {
-    fontSize: 32,
-    fontWeight: '400',
-    textAlign: 'center',
-    lineHeight: 40,
+  statDigitsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   presentDigit: {
-    color: '#D92626',
+    color: '#2d6a4f',
+    fontSize: 32,
+    fontWeight: '400',
+    lineHeight: 40,
   },
   slashChar: {
     color: '#676767',
+    fontSize: 26,
+    fontWeight: '400',
+    lineHeight: 40,
   },
   absentDigit: {
-    color: '#3F725F',
+    color: '#b71c1c',
+    fontSize: 32,
+    fontWeight: '400',
+    lineHeight: 40,
   },
 
   sectionHeadingText: {

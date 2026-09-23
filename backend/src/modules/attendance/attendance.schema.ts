@@ -1,20 +1,18 @@
 import { z } from 'zod';
 
-// Shared Status Enum
-export const AttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LEAVE', 'LATE'], {
-  message: 'Status must be PRESENT, ABSENT, LEAVE, or LATE',
+// Shared Status Enum (Sirf PRESENT, ABSENT, LEAVE)
+export const AttendanceStatusEnum = z.enum(['PRESENT', 'ABSENT', 'LEAVE'], {
+  message: 'Status must be PRESENT, ABSENT, or LEAVE',
 });
 
-// 1. Mark Qari Self Attendance
-export const markQariSelfAttendanceSchema = z.object({
-  status: AttendanceStatusEnum,
+export const markStudentAttendanceSchema = z.object({
+  studentId: z.number(),
+  status: z.enum(['PRESENT', 'ABSENT', 'LEAVE']),
   remarks: z.string().optional(),
 });
 
-// 2. Mark Student Attendance
-export const markStudentAttendanceSchema = z.object({
-  studentId: z.number({ message: 'Student ID required is a number' }),
-  status: AttendanceStatusEnum,
+export const markQariSelfAttendanceSchema = z.object({
+  status: z.enum(['PRESENT', 'ABSENT', 'LEAVE']),
   remarks: z.string().optional(),
 });
 

@@ -15,8 +15,12 @@ const URDU_MONTHS = [
 ];
 const URDU_DIGITS = ["۰", "۱", "۲", "۳", "۴", "۵", "۶", "۷", "۸", "۹"];
 
-function toUrduDigits(value: number | string): string {
-  return String(value).replace(/[0-9]/g, (digit) => URDU_DIGITS[Number(digit)]);
+export function toUrduDigits(val: number | string | undefined | null): string {
+  if (val === undefined || val === null) return '۰';
+  if (typeof val === 'number' && isNaN(val)) return '۰';
+  const str = String(val);
+  if (!str.trim()) return '۰';
+  return str.replace(/[0-9]/g, (d) => URDU_DIGITS[Number(d)]);
 }
 
 export class UrduDateFormatter {

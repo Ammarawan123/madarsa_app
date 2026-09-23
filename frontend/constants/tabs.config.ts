@@ -5,7 +5,7 @@ export interface TabConfig {
   inactiveIcon: any;
 }
 
-export const TAB_CONFIG: TabConfig[] = [
+export const TAB_CONFIG = [
   {
     name: 'profile',
     label: 'پروفائل',

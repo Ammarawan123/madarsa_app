@@ -29,6 +29,7 @@ export async function verifyOtpHandler(request: FastifyRequest, reply: FastifyRe
 
     console.log('🔍 Attempting Verification with:', { cleanEmail, cleanCode });
 
+    // Returns user object directly from OtpService
     const user = await otpService.verifyOtp(cleanEmail, cleanCode);
 
     // Verify hone par JWT Token Sign karein

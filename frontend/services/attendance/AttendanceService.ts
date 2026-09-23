@@ -1,5 +1,4 @@
 import { IAttendanceStrategy } from './IAttendanceStrategy';
-import { MockAttendanceStrategy } from './MockAttendanceStrategy';
 import {
   StudentAttendanceItem,
   AttendanceHistoryItem,
@@ -8,15 +7,13 @@ import {
 
 class AttendanceService {
   private static instance: AttendanceService;
-  private strategy: IAttendanceStrategy;
+  private strategy?: IAttendanceStrategy;
 
-  private constructor(strategy: IAttendanceStrategy) {
-    this.strategy = strategy;
-  }
+  private constructor() {}
 
   static getInstance(): AttendanceService {
     if (!AttendanceService.instance) {
-      AttendanceService.instance = new AttendanceService(new MockAttendanceStrategy());
+      AttendanceService.instance = new AttendanceService();
     }
     return AttendanceService.instance;
   }
@@ -25,21 +22,30 @@ class AttendanceService {
     this.strategy = strategy;
   }
 
+  private getStrategy(): IAttendanceStrategy {
+    if (!this.strategy) {
+      throw new Error('Attendance strategy layer set nahi hui hai.');
+    }
+    return this.strategy;
+  }
+
   getTodayAttendanceList(classId: string): Promise<StudentAttendanceItem[]> {
-    return this.strategy.getTodayAttendanceList(classId);
+    return this.getStrategy().getTodayAttendanceList(classId);
   }
 
   submitAttendance(records: StudentAttendanceItem[]): Promise<boolean> {
-    return this.strategy.submitAttendance(records);
+    return this.getStrategy().submitAttendance(records);
   }
 
-  getAttendanceHistoryList(classId: string): Promise<AttendanceHistoryItem[]> {
-    return this.strategy.getAttendanceHistoryList(classId);
+  // UPDATE: month parameter add kar diya gaya hai
+  getAttendanceHistoryList(classId: string, month?: number): Promise<AttendanceHistoryItem[]> {
+    return this.getStrategy().getAttendanceHistoryList(classId, month);
   }
 
   getStudentHistoryDetail(studentId: string): Promise<StudentHistoryDetail> {
-    return this.strategy.getStudentHistoryDetail(studentId);
+    return this.getStrategy().getStudentHistoryDetail(studentId);
   }
+
 }
 
 export const attendanceService = AttendanceService.getInstance();

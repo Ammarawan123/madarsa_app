@@ -8,31 +8,53 @@ import { AttendanceHistoryItem } from '@/types/attendance-marking.types';
 const BADGE_COLORS: Record<string, string> = {
   leave: '#8A6D1D',
   present: '#2E7D32',
-  absent: Colors.error,
-  pending: Colors.textSecondary,
+  absent: Colors.error || '#EF4444',
+  pending: Colors.textSecondary || '#6B7280',
 };
 
+export interface ExtendedAttendanceHistoryItem extends AttendanceHistoryItem {
+  monthName?: string; // e.g. "ستمبر 2026"
+  dateLabel?: string; // e.g. "23 ستمبر"
+}
+
 interface AttendanceHistoryRowProps {
-  item: AttendanceHistoryItem;
-  onPress: () => void;
+  item: ExtendedAttendanceHistoryItem;
+  onPress?: () => void;
 }
 
 export function AttendanceHistoryRow({ item, onPress }: AttendanceHistoryRowProps) {
-  const badgeColor = BADGE_COLORS[item.badgeType];
+  const badgeTypeKey = String(item.badgeType || 'pending').toLowerCase();
+  const badgeColor = BADGE_COLORS[badgeTypeKey] || BADGE_COLORS.pending;
 
   return (
-    <TouchableOpacity onPress={onPress} activeOpacity={0.85}>
-      <Card>
+    <TouchableOpacity onPress={onPress} activeOpacity={0.85} disabled={!onPress}>
+      <Card style={styles.cardContainer}>
+        {/* Month Header Banner */}
+        {item.monthName ? (
+          <View style={styles.monthHeader}>
+            <Ionicons name="calendar-outline" size={16} color={Colors.textSecondary} />
+            <Text style={styles.monthText}>{item.monthName}</Text>
+          </View>
+        ) : null}
+
+        {/* Record Row */}
         <View style={styles.row}>
           <Ionicons name="person-circle-outline" size={32} color={Colors.textSecondary} />
+
           <View style={styles.info}>
             <Text style={styles.name}>
-              {item.name} — {item.grade}
+              {item.name} {item.grade ? `— ${item.grade}` : ''}
             </Text>
-            <Text style={styles.rollNumber}>رول نمبر: {item.rollNumber}</Text>
+            <Text style={styles.rollNumber}>
+              رول نمبر: {item.rollNumber}
+              {item.dateLabel ? `  |  📅 ${item.dateLabel}` : ''}
+            </Text>
           </View>
+
           <View style={[styles.badge, { backgroundColor: `${badgeColor}20` }]}>
-            <Text style={[styles.badgeText, { color: badgeColor }]}>{item.badgeLabel}</Text>
+            <Text style={[styles.badgeText, { color: badgeColor }]}>
+              {item.badgeLabel}
+            </Text>
           </View>
         </View>
       </Card>
@@ -41,6 +63,23 @@ export function AttendanceHistoryRow({ item, onPress }: AttendanceHistoryRowProp
 }
 
 const styles = StyleSheet.create({
+  cardContainer: {
+    marginBottom: Spacing.xs,
+  },
+  monthHeader: {
+    flexDirection: 'row-reverse',
+    alignItems: 'center',
+    gap: 6,
+    paddingBottom: 8,
+    marginBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0F0F0',
+  },
+  monthText: {
+    ...Typography.hint,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+  },
   row: {
     flexDirection: 'row-reverse',
     alignItems: 'center',

@@ -1,5 +1,5 @@
 import { IParentStrategy } from './IParentStrategy';
-import { MockParentStrategy } from './MockParentStrategy';
+import { ApiParentStrategy } from './ApiParentStrategy';
 import {
   ParentDashboardData,
   ParentRoznamaRecord,
@@ -16,7 +16,8 @@ export class ParentService {
 
   static getInstance(): ParentService {
     if (!ParentService.instance) {
-      ParentService.instance = new ParentService(new MockParentStrategy());
+      // Direct Live API Strategy initialize ki gayi hai
+      ParentService.instance = new ParentService(new ApiParentStrategy());
     }
     return ParentService.instance;
   }

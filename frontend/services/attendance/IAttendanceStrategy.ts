@@ -7,6 +7,6 @@ import {
 export interface IAttendanceStrategy {
   getTodayAttendanceList(classId: string): Promise<StudentAttendanceItem[]>;
   submitAttendance(records: StudentAttendanceItem[]): Promise<boolean>;
-  getAttendanceHistoryList(classId: string): Promise<AttendanceHistoryItem[]>;
+  getAttendanceHistoryList(classId: string, month?: number): Promise<AttendanceHistoryItem[]>; // <-- Updated
   getStudentHistoryDetail(studentId: string): Promise<StudentHistoryDetail>;
 }

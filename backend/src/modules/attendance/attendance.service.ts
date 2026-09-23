@@ -1,82 +1,134 @@
 import { AttendanceRepository } from './attendance.repository';
 import { getFormattedAttendanceDateUrdu } from '../../utils/date-formatter';
+import { attendance_status } from '@prisma/client';
 
 export class AttendanceService {
   private repo = new AttendanceRepository();
 
-  // 1. Qari Self-Attendance
-  async markQariSelfAttendance(
-    loggedInUserId: number,
-    status: 'PRESENT' | 'ABSENT' | 'LEAVE' | 'LATE',
-    remarks?: string
-  ) {
-    const qari = await this.repo.findQariByUserId(loggedInUserId);
-    if (!qari) {
-      throw new Error('QARI_NOT_FOUND');
+  private getStatusUrdu(status: string): string {
+    switch (status) {
+      case 'PRESENT': return 'حاضر';
+      case 'ABSENT': return 'غیر حاضر';
+      case 'LEAVE': return 'رخصت';
+      default: return 'حاضر';
     }
+  }
+
+  async markQariSelfAttendance(loggedInUserId: number, status: 'PRESENT' | 'ABSENT' | 'LEAVE', remarks?: string) {
+    const qari = await this.repo.findQariByUserId(loggedInUserId);
+    if (!qari) throw new Error('QARI_NOT_FOUND');
     return this.repo.markQariAttendance(qari.id, status, remarks);
   }
 
-  // 2. Student Attendance Mark
-  async markStudentAttendance(
-    studentId: number,
-    status: 'PRESENT' | 'ABSENT' | 'LEAVE' | 'LATE',
-    remarks?: string
-  ) {
-    return this.repo.markStudentAttendance(studentId, status, remarks);
+  // FIXED: No longer throws error on existing attendance, updates smoothly
+  async markStudentAttendance(studentId: number, status: 'PRESENT' | 'ABSENT' | 'LEAVE', remarks?: string) {
+    return this.repo.markStudentAttendance(studentId, status as attendance_status, remarks);
   }
 
-  // 3. Dashboard Stats (With Urdu Date Metadata)
   async getDashboardStats(loggedInUserId: number) {
     const qari = await this.repo.findQariByUserId(loggedInUserId);
-    if (!qari) {
-      throw new Error('QARI_NOT_FOUND');
-    }
+    if (!qari) throw new Error('QARI_NOT_FOUND');
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    const stats = await this.repo.getDailyStatsByTrack(today, qari.trackType);
-    const dateInfo = getFormattedAttendanceDateUrdu(today);
+    const dateInfo = getFormattedAttendanceDateUrdu(new Date());
+    const targetClassId = qari.classId || 1;
+    const stats = await this.repo.getDailyStatsByClassId(new Date(), targetClassId, qari.id);
 
     return {
-      dateInfo, // Urdu Gregorian, Hijri, aur Day Name ka output
-      stats,
+      qariName: qari.user.name,
+      className: qari.className,
+      totalStudents: Number(stats.totalStudents),
+      presentCount: Number(stats.presentCount),
+      absentCount: Number(stats.absentCount),
+      profile: {
+        name: qari.user.name,
+        role: 'قاری صاحب',
+        hasUnreadNotifications: false,
+        hasUnreadMessages: false,
+      },
+      classSummary: {
+        className: qari.className,
+        classId: targetClassId,
+        gregorianDate: dateInfo.gregorianUrdu,
+        hijriDate: dateInfo.hijriUrdu,
+      },
+      attendanceSummary: {
+        totalStudents: Number(stats.totalStudents),
+        presentCount: Number(stats.presentCount),
+        absentCount: Number(stats.absentCount),
+      },
+      leaveRequests: [],
     };
   }
 
-  // 4. Qari ke Section (HIFZ / NAZRA) ke Students ki List Fetch Karein
-  async getTrackStudents(loggedInUserId: number) {
+  async getStudentsForAttendance(loggedInUserId: number, classIdOverride?: number) {
     const qari = await this.repo.findQariByUserId(loggedInUserId);
-    if (!qari) {
-      throw new Error('QARI_NOT_FOUND');
-    }
+    if (!qari) throw new Error('QARI_NOT_FOUND');
 
-    return this.repo.getStudentsByTrack(qari.trackType);
+    const targetClassId = classIdOverride || qari.classId || 1;
+    return this.repo.getStudentsForAttendance(targetClassId, qari.id);
   }
 
-  // 5. Student History (With Urdu Formatted Dates in Records)
-  async getStudentHistory(
-    studentId: number,
-    loggedInUserId: number,
-    role: string
-  ) {
-    if (role === 'PARENT') {
-      const isMyChild = await this.repo.checkParentAccess(
-        loggedInUserId,
-        studentId
-      );
-      if (!isMyChild) {
-        throw new Error('FORBIDDEN_NOT_YOUR_CHILD');
-      }
-    }
+  async getTrackStudents(loggedInUserId: number, classIdOverride?: number) {
+    return this.getStudentsForAttendance(loggedInUserId, classIdOverride);
+  }
+// attendance.service.ts ke andar getStudentHistory method ko update karein:
 
-    const historyRecords = await this.repo.getStudentAttendanceHistory(studentId);
+async getStudentHistory(
+  studentId: string | number,
+  loggedInUserId: number,
+  role: string,
+  month?: number,
+  year?: number
+) {
+  const numericStudentId = Number(studentId);
+  if (role === 'PARENT' && !isNaN(numericStudentId)) {
+    const isMyChild = await this.repo.checkParentAccess(loggedInUserId, numericStudentId);
+    if (!isMyChild) throw new Error('FORBIDDEN_NOT_YOUR_CHILD');
+  }
 
-    // Formatted Urdu dates har history record ke saath attach karein
-    return historyRecords.map((record: any) => ({
-      ...record,
-      dateInfo: getFormattedAttendanceDateUrdu(record.created_at || record.date),
-    }));
+  const currentDate = new Date();
+  const targetMonth = month || (currentDate.getMonth() + 1);
+  const targetYear = year || currentDate.getFullYear();
+
+  // Selected Month Name Formatting
+  const monthNamesUrdu = [
+    'جنوری', 'فروری', 'مارچ', 'اپریل', 'مئی', 'جون', 
+    'جولائی', 'اگست', 'ستمبر', 'اکتوبر', 'نومبر', 'دسمبر'
+  ];
+  const monthNameUrdu = monthNamesUrdu[targetMonth - 1];
+
+  const historyRecords = await this.repo.getStudentAttendanceHistory(studentId, targetMonth, targetYear);
+
+  return {
+    selectedMonth: {
+      monthNumber: targetMonth,
+      year: targetYear,
+      monthNameUrdu: monthNameUrdu,
+      displayName: `${monthNameUrdu} ${targetYear}`,
+    },
+    totalRecords: historyRecords.length,
+    records: historyRecords.map((record: any) => {
+      const recordDate = new Date(record.created_at || record.date);
+      return {
+        id: record.id,
+        studentId: record.studentId,
+        status: record.status, // PRESENT, ABSENT, LEAVE
+        statusUrdu: this.getStatusUrdu(record.status),
+        date: record.date,
+        dateInfo: getFormattedAttendanceDateUrdu(recordDate),
+        student: record.student || null,
+      };
+    })
+  };
+}
+  
+  async markBulkAttendance(loggedInUserId: number, data: any) {
+    const qari = await this.repo.findQariByUserId(loggedInUserId);
+    if (!qari) throw new Error('QARI_NOT_FOUND');
+
+    const records = Array.isArray(data) ? data : data.records || data.attendance || [];
+    if (!records || records.length === 0) throw new Error('NO_RECORDS_PROVIDED');
+
+    return await this.repo.markBulkAttendance(qari.id, records);
   }
 }

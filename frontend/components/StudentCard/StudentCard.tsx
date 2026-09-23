@@ -12,14 +12,18 @@ interface StudentCardProps {
 
 export function StudentCard({ student, onPress }: StudentCardProps) {
   const getBorderColor = () => {
-    switch (student.status) {
+    const rawStatus = String(student.status || '').toLowerCase();
+    switch (rawStatus) {
       case 'pending':
-        return '#F0A8A8'; // Subtle reddish border matching screenshot 1
+      case 'absent':
+        return '#F0A8A8'; // Soft Red
       case 'draft':
-        return '#D2C4A2'; // Subtle olive border
+      case 'leave':
+        return '#D2C4A2'; // Soft Yellow/Olive
       case 'completed':
+      case 'present':
       default:
-        return '#A6C5B8'; // Subtle greenish border
+        return '#A6C5B8'; // Soft Green
     }
   };
 
@@ -34,7 +38,7 @@ export function StudentCard({ student, onPress }: StudentCardProps) {
       </View>
 
       <View style={styles.infoContainer}>
-        <Text style={styles.nameText}>{student.name}</Text>
+       <Text style={styles.nameText}>{student.name}</Text>
         <Text style={styles.rollText}>
           رول نمبر : {toUrduDigits(student.rollNumber)}
         </Text>
@@ -42,6 +46,7 @@ export function StudentCard({ student, onPress }: StudentCardProps) {
     </TouchableOpacity>
   );
 }
+
 
 const styles = StyleSheet.create({
   card: {

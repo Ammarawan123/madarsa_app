@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { homeService } from '@/services/home/HomeService';
 import { HomeDashboardData } from '@/types/home.types';
 
@@ -9,7 +10,7 @@ interface UseHomeDashboardState {
   respondingId: string | null;
 }
 
-export function useHomeDashboard(qariId: string = 'qari-001') {
+export function useHomeDashboard() {
   const [state, setState] = useState<UseHomeDashboardState>({
     data: null,
     isLoading: true,
@@ -17,21 +18,59 @@ export function useHomeDashboard(qariId: string = 'qari-001') {
     respondingId: null,
   });
 
-  const loadDashboard = useCallback(async () => {
-    setState((prev) => ({ ...prev, isLoading: true, errorMessage: null }));
+  const isFetchingRef = useRef(false);
+  const lastFetchedTimeRef = useRef(0);
+
+  const loadDashboard = useCallback(async (isSilent = false, force = false) => {
+    const now = Date.now();
+    if (isFetchingRef.current) return;
+
+    if (!force && isSilent && now - lastFetchedTimeRef.current < 2000) {
+      return;
+    }
+
+    isFetchingRef.current = true;
+    if (!isSilent) {
+      setState((prev) => ({ ...prev, isLoading: prev.data === null, errorMessage: null }));
+    }
 
     try {
-      const data = await homeService.getHomeDashboard(qariId);
-      setState({ data, isLoading: false, errorMessage: null, respondingId: null });
-    } catch {
-      setState({
-        data: null,
+      const response: any = await homeService.getHomeDashboard();
+      const rawData = response?.data || response;
+
+      if (rawData) {
+        const summary = rawData.attendanceSummary || rawData.stats || {};
+        rawData.attendanceSummary = {
+          presentCount: Number(summary.presentCount ?? 0),
+          absentCount: Number(summary.absentCount ?? 0),
+          totalStudents: Number(summary.totalStudents ?? 0),
+        };
+      }
+
+      lastFetchedTimeRef.current = Date.now();
+      setState({ data: rawData, isLoading: false, errorMessage: null, respondingId: null });
+    } catch (err: any) {
+      const isRateLimit = err?.response?.status === 429;
+      setState((prev) => ({
+        ...prev,
         isLoading: false,
-        errorMessage: 'ڈیش بورڈ لوڈ نہیں ہو سکا',
+        errorMessage: isRateLimit
+          ? 'درخواستوں کی حد ختم ہو گئی۔ براہ کرم تھوڑی دیر بعد دوبارہ کوشش کریں۔'
+          : prev.data
+          ? null
+          : 'ڈیش بورڈ لوڈ نہیں ہو سکا',
         respondingId: null,
-      });
+      }));
+    } finally {
+      isFetchingRef.current = false;
     }
-  }, [qariId]);
+  }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadDashboard(true, false);
+    }, [loadDashboard])
+  );
 
   const respondToLeaveRequest = useCallback(
     async (requestId: string, approve: boolean) => {
@@ -39,7 +78,6 @@ export function useHomeDashboard(qariId: string = 'qari-001') {
 
       const success = await homeService.respondToLeaveRequest(requestId, approve);
 
-      // Early return — request fail ho jaye to list waisi hi rehne dein
       if (!success) {
         setState((prev) => ({ ...prev, respondingId: null }));
         return;
@@ -53,17 +91,15 @@ export function useHomeDashboard(qariId: string = 'qari-001') {
           respondingId: null,
           data: {
             ...prev.data,
-            leaveRequests: prev.data.leaveRequests.filter((request) => request.id !== requestId),
+            leaveRequests: (prev.data.leaveRequests || []).filter(
+              (request) => request.id !== requestId
+            ),
           },
         };
       });
     },
     []
   );
-
-  useEffect(() => {
-    loadDashboard();
-  }, [loadDashboard]);
 
   return { ...state, reload: loadDashboard, respondToLeaveRequest };
 }

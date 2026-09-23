@@ -53,9 +53,13 @@ app.get('/test-db', async (request, reply) => {
 });
 
 // 6. API Routes Register
+// 6. API Routes Register
 app.register(authRoutes, { prefix: '/api/auth' });
 app.register(otpRoutes, { prefix: '/api/otp' });
-app.register(userRoutes, { prefix: '/api/user' });
+
+// Register userRoutes directly under /api to match /api/parent/student-summary
+app.register(userRoutes, { prefix: '/api' }); 
+
 app.register(attendanceRoutes, { prefix: '/api' });
 app.register(roznamchaRoutes, { prefix: '/api' });
 app.register(chatRoutes, { prefix: '/api' });

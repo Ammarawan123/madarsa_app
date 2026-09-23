@@ -1,34 +1,28 @@
-import { IHomeStrategy } from './IHomeStrategy';
-import { MockHomeStrategy } from './MockHomeStrategy'; // Local mock strategy
+import { ApiHomeStrategy } from './ApiHomeStrategy';
 import { HomeDashboardData } from '@/types/home.types';
 
-class HomeService {
+export class HomeService {
   private static instance: HomeService;
-  private strategy: IHomeStrategy;
+  private apiStrategy: ApiHomeStrategy;
 
-  private constructor(strategy: IHomeStrategy) {
-    this.strategy = strategy;
+  private constructor() {
+    this.apiStrategy = new ApiHomeStrategy();
   }
 
   static getInstance(): HomeService {
     if (!HomeService.instance) {
-      // Direct local MockHomeStrategy initialize ki gayi hai
-      HomeService.instance = new HomeService(new MockHomeStrategy());
+      HomeService.instance = new HomeService();
     }
     return HomeService.instance;
   }
 
-  setStrategy(strategy: IHomeStrategy): void {
-    this.strategy = strategy;
+  getHomeDashboard(): Promise<HomeDashboardData> {
+    return this.apiStrategy.getHomeDashboard();
   }
 
-  async getHomeDashboard(qariId: string): Promise<HomeDashboardData> {
-    return this.strategy.getHomeDashboard(qariId);
-  }
-
-  async respondToLeaveRequest(requestId: string, approve: boolean): Promise<boolean> {
-    return this.strategy.respondToLeaveRequest(requestId, approve);
+  respondToLeaveRequest(requestId: string, approve: boolean): Promise<boolean> {
+    return this.apiStrategy.respondToLeaveRequest(requestId, approve);
   }
 }
 
-export const homeService = HomeService.getInstance();
+export const homeService = HomeService.getInstance();
